@@ -5,7 +5,10 @@ description = "A minimal Python development environment example."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-dependencies = []
+dependencies = [
+  "Flask>=3.0.0",
+  "flasgger>=0.9.7"
+]
 keywords = ["python", "dev", "example"]
 classifiers = [
   "Programming Language :: Python :: 3",
