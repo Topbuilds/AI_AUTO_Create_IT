@@ -1,0 +1,24 @@
+[project]
+name = "python-agent-exp"
+version = "0.1.0"
+description = "A minimal Python development environment example."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = []
+keywords = ["python", "dev", "example"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Microsoft :: Windows"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.1.1"
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
