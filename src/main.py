@@ -1,7 +1,18 @@
-from flask import Flask, jsonify, render_template_string
+from pathlib import Path
+
+from flask import Flask, jsonify, render_template_string, request, send_from_directory
 from flasgger import Swagger
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+UPLOAD_FOLDER = Path.cwd() / "uploads"
+UPLOAD_FOLDER.mkdir(exist_ok=True)
+app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "tiff", "gif"}
+
+
+def allowed_file(filename: str) -> bool:
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.get("/apidocs/")
@@ -75,5 +86,103 @@ def health():
     return jsonify({"status": "ok"})
 
 
-if __name__ == "__main__":
+@app.post("/ocr-to-excel")
+def ocr_to_excel_route():
+    """
+    Upload an image and return a download link for the exported Excel file.
+    ---
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: Image file to OCR
+    responses:
+      200:
+        description: Excel file generated successfully
+        schema:
+          type: object
+          properties:
+            filename:
+              type: string
+            download_url:
+              type: string
+      400:
+        description: Invalid file or request
+    """
+    if "file" not in request.files:
+        return jsonify({"error": "Missing file field."}), 400
+
+    file = request.files["file"]
+    filename = file.filename
+    if not filename:
+        return jsonify({"error": "No selected file."}), 400
+
+    if not allowed_file(filename):
+        return jsonify({"error": "Unsupported file type."}), 400
+
+    safe_name = secure_filename(filename)
+    input_path = Path(app.config["UPLOAD_FOLDER"]) / safe_name
+    file.save(input_path)
+
+    from ocr_excel import ocr_image_to_excel
+
+    output_path = input_path.with_suffix(".xlsx")
+    ocr_image_to_excel(input_path, output_path)
+
+    return jsonify({
+        "filename": output_path.name,
+        "download_url": f"/download/{output_path.name}"
+    })
+
+
+@app.get("/download/<path:filename>")
+def download_excel(filename: str):
+    """
+    Download the generated Excel file.
+    ---
+    parameters:
+      - name: filename
+        in: path
+        type: string
+        required: true
+        description: Excel filename to download
+    responses:
+      200:
+        description: File downloaded successfully
+    """
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename, as_attachment=True)
+
+
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run the Flask API server or OCR an image to Excel.")
+    parser.add_argument(
+        "--ocr",
+        dest="image_path",
+        help="Path to the input image file to OCR and export to Excel.",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="Output Excel file path. Defaults to the image path with .xlsx extension.",
+    )
+
+    args = parser.parse_args()
+    if args.image_path:
+        from ocr_excel import ocr_image_to_excel
+
+        image_file = Path(args.image_path)
+        output_file = Path(args.output) if args.output else image_file.with_suffix(".xlsx")
+        excel_path = ocr_image_to_excel(image_file, output_file)
+        print(f"Saved OCR Excel file at: {excel_path}")
+        return
+
     app.run(debug=True)
+
+
+if __name__ == "__main__":
+    main()

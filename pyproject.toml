@@ -7,7 +7,10 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [
   "Flask>=3.0.0",
-  "flasgger>=0.9.7"
+  "flasgger>=0.9.7",
+  "Pillow>=10.0.0",
+  "pytesseract>=0.3.11",
+  "openpyxl>=3.1.0"
 ]
 keywords = ["python", "dev", "example"]
 classifiers = [
