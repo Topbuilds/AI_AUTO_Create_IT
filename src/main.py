@@ -6,6 +6,23 @@ from flasgger import Swagger
 from werkzeug.utils import secure_filename
 
 try:
+    from .database import (
+        get_database_url,
+        init_db,
+        list_submission_records,
+        save_submission_record,
+        update_submission_status,
+    )
+except ImportError:  # pragma: no cover - supports running as a script
+    from database import (
+        get_database_url,
+        init_db,
+        list_submission_records,
+        save_submission_record,
+        update_submission_status,
+    )
+
+try:
     from .ocr_excel import ocr_image_to_excel, ocr_image_to_word
 except ImportError:  # pragma: no cover - supports running as a script
     from ocr_excel import ocr_image_to_excel, ocr_image_to_word
@@ -15,6 +32,8 @@ UPLOAD_FOLDER = (Path(__file__).resolve().parent.parent / "uploads").resolve()
 UPLOAD_FOLDER.mkdir(exist_ok=True)
 app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "tiff", "gif"}
+
+init_db(get_database_url())
 
 
 def allowed_file(filename: str) -> bool:
@@ -97,6 +116,20 @@ def health():
     return jsonify({"status": "ok"})
 
 
+@app.get("/admin/reviews")
+def admin_reviews():
+    records = list_submission_records(get_database_url())
+    return render_template("admin_reviews.html", records=records)
+
+
+@app.post("/admin/reviews/<int:record_id>/status")
+def update_review_status(record_id: int):
+    payload = request.get_json(silent=True) or {}
+    status_value = payload.get("status", "approved")
+    update_submission_status(get_database_url(), record_id=record_id, status=status_value)
+    return jsonify({"status": "updated"})
+
+
 @app.post("/ocr-to-excel")
 def ocr_to_excel_route():
     """
@@ -140,6 +173,16 @@ def ocr_to_excel_route():
 
     output_path = input_path.with_suffix(".xlsx")
     ocr_image_to_excel(input_path, output_path)
+
+    save_submission_record(
+        get_database_url(),
+        original_filename=safe_name,
+        original_path=str(input_path),
+        output_filename=output_path.name,
+        output_path=str(output_path),
+        output_format="excel",
+        status="complete",
+    )
 
     return jsonify({
         "filename": output_path.name,
@@ -190,6 +233,16 @@ def ocr_to_word_route():
 
     output_path = input_path.with_suffix(".docx")
     ocr_image_to_word(input_path, output_path)
+
+    save_submission_record(
+        get_database_url(),
+        original_filename=safe_name,
+        original_path=str(input_path),
+        output_filename=output_path.name,
+        output_path=str(output_path),
+        output_format="word",
+        status="complete",
+    )
 
     return jsonify({
         "filename": output_path.name,

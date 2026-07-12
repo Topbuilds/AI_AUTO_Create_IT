@@ -1,5 +1,6 @@
 from src.main import app, greet
 from src.ocr_excel import text_to_word
+from src.database import init_db, list_submission_records, save_submission_record
 
 
 def test_greet_returns_expected_string():
@@ -28,6 +29,33 @@ def test_home_page_is_available():
     response = client.get("/")
     assert response.status_code == 200
     assert b"OCR Transfer" in response.data
+
+
+def test_admin_reviews_page_is_available():
+    client = app.test_client()
+
+    response = client.get("/admin/reviews")
+    assert response.status_code == 200
+    assert b"Admin Review" in response.data
+
+
+def test_database_can_store_submission_record(tmp_path):
+    db_path = tmp_path / "review.db"
+    init_db(f"sqlite:///{db_path}")
+
+    record = save_submission_record(
+        db_url=f"sqlite:///{db_path}",
+        original_filename="sample.png",
+        original_path=str(tmp_path / "sample.png"),
+        output_filename="sample.xlsx",
+        output_path=str(tmp_path / "sample.xlsx"),
+        output_format="excel",
+    )
+
+    records = list_submission_records(f"sqlite:///{db_path}")
+    assert record.id is not None
+    assert len(records) == 1
+    assert records[0].original_filename == "sample.png"
 
 
 def test_text_to_word_creates_docx(tmp_path):

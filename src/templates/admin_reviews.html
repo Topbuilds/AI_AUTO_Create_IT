@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Review</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; background: #0f172a; color: #f8fafc; }
+      table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      th, td { border: 1px solid #334155; padding: 10px; text-align: left; }
+      th { background: #1e293b; }
+      .badge { padding: 4px 8px; border-radius: 999px; font-size: 0.8rem; }
+      .pending { background: #f59e0b; color: #111827; }
+      .complete { background: #10b981; color: #052e16; }
+      .approved { background: #10b981; color: #052e16; }
+      .rejected { background: #ef4444; color: #fff1f2; }
+      a { color: #7dd3fc; }
+    </style>
+  </head>
+  <body>
+    <h1>Admin Review</h1>
+    <p>Review uploaded images and generated Excel or Word outputs.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Created</th>
+          <th>Original file</th>
+          <th>Output file</th>
+          <th>Format</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in records %}
+        <tr>
+          <td>{{ record.id }}</td>
+          <td>{{ record.created_at }}</td>
+          <td>{{ record.original_filename }}</td>
+          <td>{{ record.output_filename }}</td>
+          <td>{{ record.output_format }}</td>
+          <td>
+            <span class="badge {{ record.status }}">{{ record.status }}</span>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">No submissions recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </body>
+</html>
