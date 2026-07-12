@@ -25,6 +25,21 @@ A starter Python development environment.
 - `.gitignore` - ignores environment and caches
 - `.vscode/` - recommended VS Code settings and extensions
 
+## Cloud deployment
+
+This app is ready for a public cloud deployment using a platform that supports Python web apps, such as Render or Heroku.
+
+Recommended files added:
+- `Procfile` - starts the app with Gunicorn
+- `runtime.txt` - pins the Python runtime
+
+Deployment steps:
+1. Push this repository to GitHub.
+2. Create a new web service on Render (or your preferred cloud host).
+3. Connect the GitHub repository and set the start command to:
+   - `gunicorn --bind 0.0.0.0:$PORT src.main:app`
+4. Deploy. The app will be available at the public URL assigned by the provider.
+
 ## Notes
 
 If `python` is not available on your command line, install Python and add it to PATH.

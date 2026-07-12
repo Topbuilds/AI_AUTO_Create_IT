@@ -1,11 +1,17 @@
+import os
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template_string, request, send_from_directory
+from flask import Flask, jsonify, render_template, render_template_string, request, send_from_directory
 from flasgger import Swagger
 from werkzeug.utils import secure_filename
 
+try:
+    from .ocr_excel import ocr_image_to_excel, ocr_image_to_word
+except ImportError:  # pragma: no cover - supports running as a script
+    from ocr_excel import ocr_image_to_excel, ocr_image_to_word
+
 app = Flask(__name__)
-UPLOAD_FOLDER = Path.cwd() / "uploads"
+UPLOAD_FOLDER = (Path(__file__).resolve().parent.parent / "uploads").resolve()
 UPLOAD_FOLDER.mkdir(exist_ok=True)
 app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "tiff", "gif"}
@@ -83,7 +89,7 @@ def greet_route(name: str):
 
 @app.get("/")
 def index():
-    return render_template_string(Path("src/templates/index.html").read_text(encoding="utf-8"))
+    return render_template("index.html")
 
 
 @app.get("/health")
@@ -131,8 +137,6 @@ def ocr_to_excel_route():
     safe_name = secure_filename(filename)
     input_path = Path(app.config["UPLOAD_FOLDER"]) / safe_name
     file.save(input_path)
-
-    from ocr_excel import ocr_image_to_excel
 
     output_path = input_path.with_suffix(".xlsx")
     ocr_image_to_excel(input_path, output_path)
@@ -183,8 +187,6 @@ def ocr_to_word_route():
     safe_name = secure_filename(filename)
     input_path = Path(app.config["UPLOAD_FOLDER"]) / safe_name
     file.save(input_path)
-
-    from ocr_excel import ocr_image_to_word
 
     output_path = input_path.with_suffix(".docx")
     ocr_image_to_word(input_path, output_path)
@@ -251,7 +253,7 @@ def main() -> None:
             print(f"Saved OCR Excel file at: {excel_path}")
         return
 
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
 
 
 if __name__ == "__main__":

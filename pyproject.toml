@@ -11,7 +11,8 @@ dependencies = [
   "Pillow>=10.0.0",
   "pytesseract>=0.3.11",
   "openpyxl>=3.1.0",
-  "python-docx>=1.1.0"
+  "python-docx>=1.1.0",
+  "gunicorn>=22.0.0"
 ]
 keywords = ["python", "dev", "example"]
 classifiers = [
