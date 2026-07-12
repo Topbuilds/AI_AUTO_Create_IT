@@ -9,3 +9,4 @@ env/
 .vscode/.history
 .idea/
 *.log
+uploads/

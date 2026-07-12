@@ -47,8 +47,8 @@ def swagger_ui():
 swagger = Swagger(app, template={
     "swagger": "2.0",
     "info": {
-        "title": "Greeting API",
-        "description": "A simple Flask API with Swagger UI",
+        "title": "OCR Export API",
+        "description": "Upload images to extract text and export the results as Excel or Word files",
         "version": "1.0.0"
     }
 })
@@ -79,6 +79,11 @@ def greet_route(name: str):
               type: string
     """
     return jsonify({"message": greet(name)})
+
+
+@app.get("/")
+def index():
+    return render_template_string(Path("src/templates/index.html").read_text(encoding="utf-8"))
 
 
 @app.get("/health")
@@ -138,17 +143,69 @@ def ocr_to_excel_route():
     })
 
 
+@app.post("/ocr-to-word")
+def ocr_to_word_route():
+    """
+    Upload an image and return a download link for the exported Word file.
+    ---
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: Image file to OCR
+    responses:
+      200:
+        description: Word file generated successfully
+        schema:
+          type: object
+          properties:
+            filename:
+              type: string
+            download_url:
+              type: string
+      400:
+        description: Invalid file or request
+    """
+    if "file" not in request.files:
+        return jsonify({"error": "Missing file field."}), 400
+
+    file = request.files["file"]
+    filename = file.filename
+    if not filename:
+        return jsonify({"error": "No selected file."}), 400
+
+    if not allowed_file(filename):
+        return jsonify({"error": "Unsupported file type."}), 400
+
+    safe_name = secure_filename(filename)
+    input_path = Path(app.config["UPLOAD_FOLDER"]) / safe_name
+    file.save(input_path)
+
+    from ocr_excel import ocr_image_to_word
+
+    output_path = input_path.with_suffix(".docx")
+    ocr_image_to_word(input_path, output_path)
+
+    return jsonify({
+        "filename": output_path.name,
+        "download_url": f"/download/{output_path.name}"
+    })
+
+
 @app.get("/download/<path:filename>")
 def download_excel(filename: str):
     """
-    Download the generated Excel file.
+    Download the generated Excel or Word file.
     ---
     parameters:
       - name: filename
         in: path
         type: string
         required: true
-        description: Excel filename to download
+        description: Generated Excel or Word filename to download
     responses:
       200:
         description: File downloaded successfully
@@ -159,26 +216,39 @@ def download_excel(filename: str):
 def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Run the Flask API server or OCR an image to Excel.")
+    parser = argparse.ArgumentParser(description="Run the Flask API server or OCR an image to Excel or Word.")
     parser.add_argument(
         "--ocr",
         dest="image_path",
-        help="Path to the input image file to OCR and export to Excel.",
+        help="Path to the input image file to OCR and export.",
     )
     parser.add_argument(
         "-o",
         "--output",
-        help="Output Excel file path. Defaults to the image path with .xlsx extension.",
+        help="Output file path. Defaults to the image path with .xlsx or .docx extension depending on the selected format.",
+    )
+    parser.add_argument(
+        "--word",
+        action="store_true",
+        help="Export OCR output as a Word document instead of Excel.",
     )
 
     args = parser.parse_args()
     if args.image_path:
-        from ocr_excel import ocr_image_to_excel
+        if args.word:
+            from ocr_excel import ocr_image_to_word
 
-        image_file = Path(args.image_path)
-        output_file = Path(args.output) if args.output else image_file.with_suffix(".xlsx")
-        excel_path = ocr_image_to_excel(image_file, output_file)
-        print(f"Saved OCR Excel file at: {excel_path}")
+            image_file = Path(args.image_path)
+            output_file = Path(args.output) if args.output else image_file.with_suffix(".docx")
+            word_path = ocr_image_to_word(image_file, output_file)
+            print(f"Saved OCR Word file at: {word_path}")
+        else:
+            from ocr_excel import ocr_image_to_excel
+
+            image_file = Path(args.image_path)
+            output_file = Path(args.output) if args.output else image_file.with_suffix(".xlsx")
+            excel_path = ocr_image_to_excel(image_file, output_file)
+            print(f"Saved OCR Excel file at: {excel_path}")
         return
 
     app.run(debug=True)

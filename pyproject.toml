@@ -10,7 +10,8 @@ dependencies = [
   "flasgger>=0.9.7",
   "Pillow>=10.0.0",
   "pytesseract>=0.3.11",
-  "openpyxl>=3.1.0"
+  "openpyxl>=3.1.0",
+  "python-docx>=1.1.0"
 ]
 keywords = ["python", "dev", "example"]
 classifiers = [

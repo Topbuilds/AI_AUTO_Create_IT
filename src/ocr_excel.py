@@ -3,6 +3,7 @@ import platform
 
 from PIL import Image
 import pytesseract
+from docx import Document
 from openpyxl import Workbook
 
 
@@ -43,6 +44,18 @@ def text_to_excel(text: str, excel_path: Path | str) -> Path:
     return path
 
 
+def text_to_word(text: str, word_path: Path | str) -> Path:
+    """Write OCR text to a Word document, one line per paragraph."""
+    path = Path(word_path)
+    document = Document()
+
+    for line in text.splitlines():
+        document.add_paragraph(line)
+
+    document.save(path)
+    return path
+
+
 def ocr_image_to_excel(image_path: Path | str, excel_path: Path | str | None = None) -> Path:
     """Run OCR on the input image and export the result to an Excel file."""
     image_path = Path(image_path)
@@ -51,3 +64,13 @@ def ocr_image_to_excel(image_path: Path | str, excel_path: Path | str | None = N
 
     text = ocr_image_to_text(image_path)
     return text_to_excel(text, excel_path)
+
+
+def ocr_image_to_word(image_path: Path | str, word_path: Path | str | None = None) -> Path:
+    """Run OCR on the input image and export the result to a Word document."""
+    image_path = Path(image_path)
+    if word_path is None:
+        word_path = image_path.with_suffix(".docx")
+
+    text = ocr_image_to_text(image_path)
+    return text_to_word(text, word_path)
