@@ -1,5 +1,7 @@
+from PIL import Image
+
 from src.main import app, greet
-from src.ocr_excel import text_to_word
+from src.ocr_excel import ocr_image_to_text, text_to_word
 from src.database import init_db, list_submission_records, save_submission_record
 
 
@@ -72,3 +74,13 @@ def test_text_to_word_creates_docx(tmp_path):
     text = "\n".join(paragraph.text for paragraph in document.paragraphs)
     assert "Hello OCR" in text
     assert "World" in text
+
+
+def test_ocr_image_to_text_prefers_paddleocr(monkeypatch, tmp_path):
+    image_path = tmp_path / "sample.png"
+    Image.new("RGB", (1, 1), color="white").save(image_path)
+
+    monkeypatch.setattr("src.ocr_excel._run_paddleocr", lambda image_path: "hello from paddle", raising=False)
+    monkeypatch.setattr("src.ocr_excel.pytesseract.image_to_string", lambda image, lang=None: "hello from tesseract")
+
+    assert ocr_image_to_text(image_path) == "hello from paddle"

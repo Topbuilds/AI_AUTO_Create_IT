@@ -1,10 +1,16 @@
 from pathlib import Path
 import platform
+from typing import List
 
 from PIL import Image
 import pytesseract
 from docx import Document
 from openpyxl import Workbook
+
+try:
+    from paddleocr import PaddleOCR
+except ImportError:  # pragma: no cover - allows import without PaddleOCR installed
+    PaddleOCR = None
 
 
 def configure_tesseract_path() -> None:
@@ -19,11 +25,35 @@ def configure_tesseract_path() -> None:
 configure_tesseract_path()
 
 
+def _run_paddleocr(image_path: Path | str) -> str:
+    """Run OCR with PaddleOCR and return the extracted text."""
+    if PaddleOCR is None:
+        raise RuntimeError("paddleocr is not installed")
+
+    ocr = PaddleOCR(use_angle_cls=True, lang="ch")
+    result = ocr.ocr(str(image_path), cls=True)
+    if not result:
+        return ""
+
+    texts: List[str] = []
+    for line in result[0]:
+        texts.append(line[1][0])
+
+    return "\n".join(texts).strip()
+
+
 def ocr_image_to_text(image_path: Path | str) -> str:
     """Perform OCR on the image and return the extracted text."""
     path = Path(image_path)
     if not path.exists():
         raise FileNotFoundError(f"Image not found: {path}")
+
+    try:
+        text = _run_paddleocr(path)
+        if text:
+            return text
+    except Exception:
+        pass
 
     with Image.open(path) as image:
         text = pytesseract.image_to_string(image, lang="chi_sim+eng")
@@ -36,7 +66,6 @@ def text_to_excel(text: str, excel_path: Path | str) -> Path:
     path = Path(excel_path)
     workbook = Workbook()
     sheet = workbook.active
-
     for row_index, line in enumerate(text.splitlines(), start=1):
         sheet.cell(row=row_index, column=1, value=line)
 
